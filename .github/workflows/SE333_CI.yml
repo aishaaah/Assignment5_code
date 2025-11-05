@@ -1,12 +1,15 @@
 name: SE333_CI
+
 on:
   push:
-    branches:
-      - main
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
 
 jobs:
   SE333_CI_JOB:
     runs-on: ubuntu-latest
+
     steps:
       - name: checkout-repo
         uses: actions/checkout@v4
@@ -14,21 +17,32 @@ jobs:
       - name: setupJava
         uses: actions/setup-java@v4
         with:
+          distribution: temurin
           java-version: '21'
-          distribution: 'temurin'
-          architecture: x64
+          cache: maven
 
-      - name: Install Linter
-        ##TODO
+      # Build once so dependencies/plugins (incl. Checkstyle) are present
+      - name: Pre-fetch dependencies
+        run: mvn -B -DskipTests=true clean install
 
+      # Run Checkstyle (report will be at target/checkstyle-result.xml)
       - name: Run Checkstyle
-        ##TODO
+        run: mvn -B -DskipTests=true validate
 
       - name: Upload Checkstyle Result
-        ##TODO
+        uses: actions/upload-artifact@v4
+        with:
+          name: checkstyle.xml
+          path: "**/target/checkstyle-result.xml"
+          if-no-files-found: warn
 
+      # Run tests with Jacoco (report at target/site/jacoco/jacoco.xml)
       - name: Run Maven Test
-        ##TODO
+        run: mvn -B test
 
-      - name: Jacoco Report
-        ##TODO
+      - name: Upload Jacoco Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: jacoco.xml
+          path: "**/target/site/jacoco/jacoco.xml"
+          if-no-files-found: warn
